@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { exec } from 'child_process';
-import { config } from 'dotenv';
 import { configURL } from '../../config'; 
-import { v4 as uuidv4 } from 'uuid';
 
 export async function createUserFarm(activationCode: string) {
   const newUser = {
@@ -31,19 +29,16 @@ export async function createUserFarm(activationCode: string) {
   return newUser;
 }
 
-export async function createUnusedActivationCode(code: string): Promise<string> {
+export async function getUnusedActivationCode(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-        config();
         const podName = process.env.MYSQL_POD;
         const dbName = process.env.MYSQL_DATABASE;
         const dbUser = process.env.MYSQL_USER;
         const dbPassword = process.env.MYSQL_PASSWORD;
-        const date_plus28 = getDatePlusDays(28);
 
+        const getActivationCodeSQL = 'SELECT kod FROM KodAktywacyjny WHERE czyWykorzystany = 0 LIMIT 1';
 
-        const getActivationCodeSQL = `insert into KodAktywacyjny (kod, dataWaznosci, czyWykorzystany) values ('${code}', '${date_plus28}', 0)`;
-
-        const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e "${getActivationCodeSQL}" ${dbName}`;
+        const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e '${getActivationCodeSQL}' ${dbName}`;
         const kubectlCommand = `kubectl exec ${podName} -- ${sqlCommand}`;
 
         exec(kubectlCommand, (error, stdout, stderr) => {
@@ -52,20 +47,14 @@ export async function createUnusedActivationCode(code: string): Promise<string> 
             return reject(error);
           }
 
-          console.log(`Fetched activation code: ${code}`);
-          resolve(code);
+          const activationCode = stdout.trim().split('\n')[1]; // Get the first available code
+          console.log(`Fetched activation code: ${activationCode}`);
+          resolve(activationCode);
         });
     });
-  }
-
-
+}
 function getDatePlusDays(days: number) {
     const today = new Date();
     today.setDate(today.getDate() + days);
     return today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-}
-
-export async function createUniqueActivationCode() {
-    const uniqueCode = uuidv4(); 
-    return uniqueCode;
 }
