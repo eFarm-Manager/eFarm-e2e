@@ -20,13 +20,13 @@ export default function createTests() {
     
     test('Invalid log in credentials', async ({page}) => {
         await page.goto(`${configURL.baseURL}/sign-in`);
-        await page.fill('input[name="username"]', "invalidLogin");
+        await page.fill('input[name="username"]', `invalidLogin_${Date.now()}`);
         await page.fill('input[name="password"]', "invalidPassword");
         await page.click('button[type="submit"]');
     
         const errorMessage = page.locator('p'); 
     
         await expect(errorMessage).toBeVisible();
-        await expect(errorMessage).toContainText('Invalid login credentials.');
+        await expect(errorMessage).toContainText('Nieprawidłowe dane logowania');
     });
 }

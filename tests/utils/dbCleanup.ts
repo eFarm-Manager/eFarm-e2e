@@ -5,12 +5,13 @@ export async function cleanupFarm_User_Code(username: string, activationCode: st
         const podName = process.env.MYSQL_POD; 
         const dbName = process.env.MYSQL_DATABASE;
         const dbUser = process.env.MYSQL_USER;
-        const dbPassword = process.env.MYSQL_PASSWORD;      
+        const dbPassword = process.env.MYSQL_PASSWORD; 
+        const namespace = process.env.MYSQL_NAMESPACE;     
         const deleteUserSQL = `DELETE FROM Uzytkownik WHERE login = '${username}'`;
         const deleteFarmSQL = `DELETE FROM Gospodarstwo WHERE nazwaGospodarstwa = '${farmName}'`;
         const unmarkCodeSQL = `UPDATE KodAktywacyjny SET czyWykorzystany = 0 WHERE kod = '${activationCode}'`;        
         const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e "${deleteUserSQL}; ${deleteFarmSQL}; ${unmarkCodeSQL}" ${dbName}`;        
-        const kubectlCommand = `kubectl exec ${podName} -- ${sqlCommand}`;        
+        const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;        
         exec(kubectlCommand, (error, stdout, stderr) => {
           if (error) {
             console.error(`Error executing kubectl exec: ${stderr}`);
@@ -27,16 +28,36 @@ export async function cleanup_User(username: string) {
         const podName = process.env.MYSQL_POD; 
         const dbName = process.env.MYSQL_DATABASE;
         const dbUser = process.env.MYSQL_USER;
-        const dbPassword = process.env.MYSQL_PASSWORD;      
+        const dbPassword = process.env.MYSQL_PASSWORD;  
+        const namespace = process.env.MYSQL_NAMESPACE;     
         const deleteUserSQL = `DELETE FROM Uzytkownik WHERE login = '${username}'`;      
         const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e "${deleteUserSQL}" ${dbName}`;        
-        const kubectlCommand = `kubectl exec ${podName} -- ${sqlCommand}`;        
+        const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;        
         exec(kubectlCommand, (error, stdout, stderr) => {
           if (error) {
             console.error(`Error executing kubectl exec: ${stderr}`);
             return reject(error);
           }
-          console.log(`Cleanup successful: ${stdout}`);
+          resolve();
+        });
+    });
+}
+
+export async function restore_Equipment(equipmentId: number, equipmentName: string) {
+    return new Promise<void>((resolve, reject) => {
+        const podName = process.env.MYSQL_POD; 
+        const dbName = process.env.MYSQL_DATABASE;
+        const dbUser = process.env.MYSQL_USER;
+        const dbPassword = process.env.MYSQL_PASSWORD;  
+        const namespace = process.env.MYSQL_NAMESPACE;     
+        const deleteEquipmentSQL = `UPDATE Sprzet SET czyDostepny = 1 WHERE idSprzet = ${equipmentId} AND nazwaSprzetu = '${equipmentName}'`;      
+        const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e "${deleteEquipmentSQL}" ${dbName}`;        
+        const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;        
+        exec(kubectlCommand, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Error executing kubectl exec: ${stderr}`);
+            return reject(error);
+          }
           resolve();
         });
     });

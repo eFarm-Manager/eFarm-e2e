@@ -27,7 +27,15 @@ export default function createTests() {
       await page.fill('input[name="farmName"]', newUser.farmName);
       await page.fill('input[name="activationCode"]', newUser.activationCode);
       await page.click('button[type="submit"]');
+      await expect(page).toHaveURL(`${configURL.baseURL}/sign-in`);
+
+      await page.fill('input[name="username"]', newUser.username);
+      await page.fill('input[name="password"]', newUser.password);
+      await page.click('button[type="submit"]');
       await expect(page).toHaveURL(`${configURL.baseURL}/dashboard`); 
+
+      await page.goto(`${configURL.baseURL}/farm-details`);
+      await expect(page.locator('text=' + newUser.farmName)).toBeVisible();
       
       await cleanupFarm_User_Code(newUser.username,activationCode,newUser.farmName);
   });

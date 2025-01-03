@@ -35,11 +35,12 @@ export async function getUnusedActivationCode(): Promise<string> {
         const dbName = process.env.MYSQL_DATABASE;
         const dbUser = process.env.MYSQL_USER;
         const dbPassword = process.env.MYSQL_PASSWORD;
+        const namespace = process.env.MYSQL_NAMESPACE;
 
         const getActivationCodeSQL = 'SELECT kod FROM KodAktywacyjny WHERE czyWykorzystany = 0 LIMIT 1';
 
         const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e '${getActivationCodeSQL}' ${dbName}`;
-        const kubectlCommand = `kubectl exec ${podName} -- ${sqlCommand}`;
+        const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;
 
         exec(kubectlCommand, (error, stdout, stderr) => {
           if (error) {
@@ -47,14 +48,61 @@ export async function getUnusedActivationCode(): Promise<string> {
             return reject(error);
           }
 
-          const activationCode = stdout.trim().split('\n')[1]; // Get the first available code
-          console.log(`Fetched activation code: ${activationCode}`);
+          const activationCode = stdout.trim().split('\n')[1]; 
           resolve(activationCode);
         });
     });
 }
+
+export async function getNotActiveFarm(): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const podName = process.env.MYSQL_POD;
+      const dbName = process.env.MYSQL_DATABASE;
+      const dbUser = process.env.MYSQL_USER;
+      const dbPassword = process.env.MYSQL_PASSWORD;
+      const namespace = process.env.MYSQL_NAMESPACE;
+
+      const getFarmNameSQL = 'SELECT nazwaGospodarstwa FROM Gospodarstwo WHERE czyAktywne = 0 LIMIT 1';
+
+      const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e '${getFarmNameSQL}' ${dbName}`;
+      const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;
+      exec(kubectlCommand, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error fetching activation code: ${stderr}`);
+          return reject(error);
+        }
+
+        const farmName = stdout.trim().split('\n')[1]; 
+        resolve(farmName);
+      });
+    })
+}
+
+export async function getUsedCode(): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const podName = process.env.MYSQL_POD;
+    const dbName = process.env.MYSQL_DATABASE;
+    const dbUser = process.env.MYSQL_USER;
+    const dbPassword = process.env.MYSQL_PASSWORD;
+    const namespace = process.env.MYSQL_NAMESPACE;
+
+    const getActivationCodeSQL = 'SELECT kod FROM KodAktywacyjny WHERE czyWykorzystany = 1 LIMIT 1';
+
+    const sqlCommand = `mysql -u ${dbUser} -p${dbPassword} -e '${getActivationCodeSQL}' ${dbName}`;
+    const kubectlCommand = `kubectl exec -n ${namespace} ${podName} -- ${sqlCommand}`;
+    exec(kubectlCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error fetching activation code: ${stderr}`);
+        return reject(error);
+      }
+
+      const activationCode = stdout.trim().split('\n')[1]; 
+      resolve(activationCode);
+    });
+  })
+}
 function getDatePlusDays(days: number) {
     const today = new Date();
     today.setDate(today.getDate() + days);
-    return today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    return today.toISOString().split('T')[0];
 }
